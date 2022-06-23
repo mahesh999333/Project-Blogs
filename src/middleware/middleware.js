@@ -24,10 +24,12 @@ const auth = async function(req, res, next) {
     next()
 }
 
+
+
+//<------------------------Authorization to user to only its own data----------------------->
+
+
 const authorisation = async function(req, res, next) {
-
-
-    //<------------------------Authorization to user to only its own data----------------------->
 
     let token = req.headers["x-Api-key"];
     if (!token) token = req.headers["x-api-key"];
