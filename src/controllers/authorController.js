@@ -1,34 +1,47 @@
 const authorModel = require("../models/authorModel")
-const jwt = require("jsonwebtoken")
+const validator = require('validator');
+const jwt = require('jsonwebtoken')
+
 const createAuthor = async function(req, res) {
     try {
-        let data = req.body
-        const { fname, lname, title, emailId, password } = data
+
+        const { fname, lname, title, emailId, password } = req.body
 
         if (!(fname && lname && title && emailId && password)) {
             return res.status(400).send({ status: false, msg: "Please enter all the details." })
         }
-        let duplicate = await authorModel.findOne({ emailId: data.emailId })
 
-        if (duplicate) {
-            res.status(400).send({ status: false, msg: "Email Id is already registered." })
+        if (typeof(fname) !== "string" || !validator.isAlpha(fname)) {
+            return res.status(400).send({ status: false, msg: "First name is not valid" })
+        }
+        if (typeof(lname) !== "string" || !validator.isAlpha(lname)) {
+            return res.status(400).send({ status: false, msg: "Last name is not valid" })
         }
 
         if ((title != 'Mr') && (title != 'Mrs') && (title != 'Miss')) {
             return res.status(400).send({ status: false, msg: "Please enter the correct title (Mr, Mrs, Miss)" })
         }
 
-        if (typeof(fname) !== 'string') {
-            return res.status(400).send({ status: false, msg: "First name is not valid" })
+        if (typeof(emailId) !== "string" || !validator.isEmail(emailId)) {
+            return res.status(400).send({ status: false, mgs: "Email Id is in incorrect format." })
         }
-        if (typeof(lname) !== 'string') {
-            return res.status(400).send({ status: false, msg: "Last name is not valid" })
+
+        let duplicate = await authorModel.findOne({ emailId: emailId })
+        if (duplicate) {
+            return res.status(400).send({ status: false, msg: "Email Id is already registered." })
         }
-        if (typeof(emailId) !== 'string') {
-            return res.status(400).send({ status: false, msg: "Email is not valid" })
+
+        if (typeof(password) !== "string") {
+            return res.status(400).send({ status: false, msg: "Password is not in correct format" })
         }
-        if (typeof(password) !== 'string') {
-            return res.status(400).send({ status: false, msg: "Password is not valid" })
+
+        if (!validator.isStrongPassword(password)) {
+            return res.status(400).send({ status: false, msg: "Kindly use atleast one uppercase alphabets, numbers and special characters for strong password." })
+        }
+
+        let duplicatePassword = await authorModel.findOne({ password: password })
+        if (duplicatePassword) {
+            return res.status(400).send({ status: false, msg: "Password is very common, try to use different password." })
         }
 
         let saveData = await authorModel.create(data)
@@ -40,7 +53,7 @@ const createAuthor = async function(req, res) {
         res.status(201).send({ status: true, data: saveData })
 
     } catch (error) {
-        res.status(500).send({ status: false, msg: error.message })
+        return res.status(500).send({ status: false, msg: error.message })
     }
 }
 
@@ -48,21 +61,20 @@ const login = async(req, res) => {
     try {
         let username = req.body.emailId
         let password = req.body.password
-        
-        
-        if(!username || !password){
-            return res.status(400).send({status:false, msg:"Please Enter email id and password both."})
-        }
-        let authorEmailId = await authorModel.findOne({ emailId: username }).select({ emailId: 1 })
-        let authorPassword = await authorModel.findOne({ emailId: username }).select({ password: 1 }) // storing password as well as _id
-        
-        
-        if(!authorEmailId){
-            return res.status(404).send({status:false, msg:"Please enter correct email."})
-        }
-        
+       
 
-        if (password !== authorPassword.password) {
+        if (!username || !password) {
+            return res.status(400).send({ status: false, msg: "Please Enter email id and password both." })
+        }
+        let author = await authorModel.findOne({ emailId: username }).select({ emailId: 1, password: 1 })
+        let authorEmailId = author.emailId
+        let authorPassword = author.password
+        
+        if (!authorEmailId) {
+            return res.status(404).send({ status: false, msg: "Please enter correct email." })
+        }
+
+        if (password !== authorPassword) {
             return res.status(400).send({ status: false, msg: "Email Id and password are not matched, Please enter correct password." })
         }
 
@@ -70,7 +82,7 @@ const login = async(req, res) => {
             "mahesh-rajat-blog" //secret key
         );
         res.setHeader("x-api-key", token)
-        res.status(201).send({ status: true, data: token })
+        res.status(200).send({ status: true, data: token })
 
     } catch (error) {
         console.log(error.data)

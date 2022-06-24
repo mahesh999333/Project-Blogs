@@ -1,55 +1,59 @@
 const jwt = require("jsonwebtoken");
 const authorModel = require("../models/authorModel");
 
-const auth = async function(req, res, next) {
-    let token = req.headers["x-Api-key"]
-    if (!token) token = req.headers["x-api-key"]
 
-    if (!token) { return res.status(400).send({ status: false, msg: "Token must be present in request headers" }) }
+//<-------------------------    ------------Authentication---------------------------------------------->
+
+const auth = async function(req, res, next) {
 
     try {
-        let decodedToken = jwt.verify(token, "mahesh-rajat-blog")
+        let token = req.headers["x-Api-key"]
+        if (!token) token = req.headers["x-api-key"]
 
+        if (!token) { return res.status(400).send({ status: false, msg: "Token must be present in request headers" }) }
+
+        let decoded = jwt.decode(token)
+        if (!decoded) {
+            return res.status(400).send({ status: false, msg: "Token is not in correct format" })
+        }
+
+        let authorIdParams = req.params.authorId
+        let authorIdQuery = req.query.authorId
+        let details = await authorModel.findById(authorIdParams || authorIdQuery)
+
+        if (!details) {
+            return res.status(401).send({ status: false, msg: "Author is not exist" })
+        }
     } catch (error) {
-        return res.status(401).send({ status: false, msg: error.message })
-    }
-
-    authorId = req.params.authorId
-    let details = await authorModel.findById(authorId)
-
-    if (!details) {
-        return res.status(401).send({ status: false, msg: "Author is not exist" })
+        return res.status(500).send({ status: false, msg: error.message })
     }
 
     next()
 }
 
-
-
-//<------------------------Authorization to user to only its own data----------------------->
-
+//<-----------------------------Authorization to user to only its own data------------------------------------>
 
 const authorisation = async function(req, res, next) {
 
-    let token = req.headers["x-Api-key"];
-    if (!token) token = req.headers["x-api-key"];
-    console.log(token)
     try {
-        let decodedToken = jwt.verify(token, "mahesh-rajat-blog");
-        console.log(decodedToken)
-    } catch (error) {
-        return res.status(500).send({ status: false, msg: "Token is Invalid" })
-    }
-    //userId for which the request is made. In this case message to be posted.
-    let decodedToken = jwt.verify(token, "mahesh-rajat-blog");
-    let authorId = req.params.authorId
-        //userId for the logged-in user
-    let authorLoggedIn = decodedToken.authorId
+        let token = req.headers["x-Api-key"];
+        if (!token) token = req.headers["x-api-key"];
 
-    //userId comparision to check if the logged-in user is requesting for their own data
-    if (authorId != authorLoggedIn) {
-        return res.send({ status: false, msg: 'Access is Denied' })
+        let decodedToken = jwt.verify(token, "mahesh-rajat-blog");
+        let authorIdParams = req.params.authorId
+        let authorIdQuery = req.query.authorId
+
+        let authorLoggedIn = decodedToken.authorId
+
+        if ((authorIdParams != authorLoggedIn) || (authorIdQuery != authorLoggedIn)) {
+
+            return res.send({ status: false, msg: 'Access is Denied' })
+
+        }
+    } catch (error) {
+        return res.status(500).send({ status: false, msg: error.message })
     }
+
 
     next()
 }
