@@ -1,5 +1,5 @@
 const authorModel = require("../models/authorModel")
-
+const jwt = require("jsonwebtoken")
 const createAuthor = async function(req, res) {
     try {
         let data = req.body
@@ -48,19 +48,32 @@ const login = async(req, res) => {
     try {
         let username = req.body.emailId
         let password = req.body.password
+        
+        
+        if(!username || !password){
+            return res.status(400).send({status:false, msg:"Please Enter email id and password both."})
+        }
+        let authorEmailId = await authorModel.findOne({ emailId: username }).select({ emailId: 1 })
+        let authorPassword = await authorModel.findOne({ emailId: username }).select({ password: 1 }) // storing password as well as _id
+        
+        
+        if(!authorEmailId){
+            return res.status(404).send({status:false, msg:"Please enter correct email."})
+        }
+        
 
-        let author = await authorModel.findOne({ emailId: username, password: password }).select({ emailId: 1, password: 1 })
-        if (!author) {
-            return res.status(404).send({ status: false, msg: "Email Id and password are not matched." })
+        if (password !== authorPassword.password) {
+            return res.status(400).send({ status: false, msg: "Email Id and password are not matched, Please enter correct password." })
         }
 
-        let token = jwt.sign({ authorId: author._id.toString(), batch: "Radon" }, //payload
+        let token = jwt.sign({ authorId: authorEmailId._id.toString(), batch: "Radon" }, //payload
             "mahesh-rajat-blog" //secret key
         );
         res.setHeader("x-api-key", token)
         res.status(201).send({ status: true, data: token })
 
     } catch (error) {
+        console.log(error.data)
         res.status(500).send({ status: false, msg: error.message })
     }
 }

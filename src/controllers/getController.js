@@ -1,17 +1,9 @@
-const { count } = require("console")
 const blogModel = require("../models/blogModel")
 const authorModel = require("../models/authorModel")
 
 
 const blogs = async(req, res) => {
     try {
-        let blog = await blogModel.find({
-            isDeleted: false,
-            isPublished: true
-        })
-        if (blog === null) {
-            return res.status(404).send({ status: false, msg: "Document Not Found" })
-        }
 
         let result = {}
         let { authorId, category, tags, subCategory } = req.query
@@ -28,20 +20,32 @@ const blogs = async(req, res) => {
             result.tags = tags
         if (subCategory != undefined)
             result.subCategory = subCategory
+        try {
+            console.log(result)
+            let final = await blogModel.find({
+                $and: [{ authorId: authorId }, { category: category }, {
+                    tags: { $in: tags },
+                    subCategory: { $in: subCategory }
+                }],
+                isDeleted: false,
+                isPublished: true
+            })
 
-        console.log(result)
-        let final = await blogModel.find({
-            $and: [{ authorId: authorId }, { category: category }, {
-                tags: { $in: tags },
-                subCategory: { $in: subCategory }
-            }],
+            console.log(final)
+
+            return res.status(200).send({ status: true, data: final })
+
+        } catch (error) {
+            res.status(500).send({ status: false, msg: error.message })
+        }
+
+        let blog = await blogModel.find({
             isDeleted: false,
             isPublished: true
         })
-
-        console.log(final)
-
-        res.status(200).send({ status: true, data: final })
+        if (blog === null) {
+            return res.status(404).send({ status: false, msg: "Document Not Found" })
+        }
 
     } catch (error) {
         res.status(500).send({ status: false, msg: error.message })

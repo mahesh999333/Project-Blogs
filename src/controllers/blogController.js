@@ -3,7 +3,9 @@ const blogModel = require("../models/blogModel")
 const authorModel = require("../models/authorModel")
 const mongoose = require('mongoose')
 const jwt = require('jsonwebtoken')
-    //const ObjectId = mongoose.Schema.Types.ObjectId
+
+
+//<--------------------------------------------Creating Blog------------------------------------------------->
 
 const createBlog = async function(req, res) {
     try {
@@ -12,7 +14,6 @@ const createBlog = async function(req, res) {
         const { title, body, tags, category, subCategory } = data
         let a = await authorModel.findById(authorId).select({ _id: 1 })
         console.log(a)
-            // Edge Case 1 :- If user did not give any authorId 
 
         if ((data.authorId) == null) {
             return res.status(400).send({ status: false, msg: "Invalid Request" })
@@ -46,16 +47,16 @@ const createBlog = async function(req, res) {
 
         // The blog is created. 
 
-        if (authorIdArr.includes(data.authorId)) {
+        let saveData = await blogModel.create(data)
+        return res.status(201).send({ status: true, data: saveData })
 
-            let saveData = await blogModel.create(data)
-            return res.status(201).send({ status: true, data: saveData })
-
-        }
     } catch (error) {
         res.status(500).send({ status: false, msg: error.message })
     }
 }
+
+
+//<--------------------------------------------Update Blog------------------------------------------------->
 
 const updateBlog = async function(req, res) {
 
@@ -91,6 +92,9 @@ const updateBlog = async function(req, res) {
 
 }
 
+
+//<--------------------------------------Delete Blog by Path Parameters---------------------------------------->
+
 const deleteBlogByParams = async function(req, res) {
     try {
         let data = req.params.blogId
@@ -124,6 +128,9 @@ const deleteBlogByParams = async function(req, res) {
         res.status(500).send({ status: false, msg: error.message })
     }
 }
+
+
+//<--------------------------------------------Delete Blog by Query Parameters------------------------------------------------->
 
 const deleteBlogByQuery = async function(req, res) {
     const { category, authorId, isPublished, tags, subCategory } = req.query
